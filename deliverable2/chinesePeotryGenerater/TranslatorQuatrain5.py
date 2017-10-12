@@ -8,25 +8,31 @@ class Config(object):
 
 class TranslatorQuatrain5(Model):
     def addPlaceHolder(self):
-        self.line0 = tf.placeholder( tf.int32, shape = (5,) )
-        self.line123 = tf.placeholder( tf.int32, shape = (5,3) )
+        self.line0 = tf.placeholder( tf.int32, shape = [5,] )
+        self.line123 = tf.placeholder( tf.int32, shape = [5,3] )
     def addVariable(self):
+        q = self.config.q
+        v = self.config.v
+        lr = self.config.lr
         #CSM
-        self.L = tf.Variable( tf.random_normal( shape = (self.config.v, self.config.q) )# TODO: normalize colume? BUT cannot keep length = 1 when trainning
-        self.C12 = tf.Variable( tf.random_normal( shape = (2, self.config.q ) ) )
-        self.C22 = tf.Variable( tf.random_normal( shape = (2, self.config.q ) ) )
-        self.C33 = tf.Variable( tf.random_normal( shape = (3, self.config.q ) ) )
+        with tf.variable_scope("csm"):
+            self.L = tf.get_variable("L", [v,q])
+            self.C12 = tf.get_variable("C12", [2, q])
+            self.C22 = tf.get_variable("C22", [2, q])
+            self.C33 = tf.get_variable("C33", [3, q])
         #RCM
-        self.M = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.q * 2) ) )
-        self.U0 = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.q) ) )
-        self.U1 = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.q) ) )
-        self.U2 = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.q) ) )
-        self.U3 = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.q) ) )
+        with tf.variable_scope("rcm"):
+            self.M = tf.get_variable("M", [q, q * 2])
+            self.U0 = tf.get_variable("U0", [q, q])
+            self.U1 = tf.get_variable("U1", [q, q])
+            self.U2 = tf.get_variable("U2", [q, q])
+            self.U3 = tf.get_variable("U3", [q, q])
         #RGM
-        self.R = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.q) ) )
-        self.V = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.v) ) )
-        self.H = tf.Variable( tf.random_normal( shape = (self.config.q, self.config.q) ) )
-        self.Y = tf.Variable( tf.random_normal( shape = (self.config.v, self.config.q) ) )
+        with tf.variable_scope("rgm"):
+            self.R = tf.get_variable("R", [q, q])
+            self.V = tf.get_variable("V", [q, v])
+            self.H = tf.get_variable("H", [q, q])
+            self.Y = tf.get_variable("Y", [v, q])
     def getPredFunc(self):
         """
         To get the probability distribution of each char in line2, 3 and 4.
@@ -41,11 +47,11 @@ class TranslatorQuatrain5(Model):
         Once a new line is generated from RGM, it goes into CSM again.......
         """
         # CSM: line0 to vector
-        v0 = csm(self.line0) # vector of size q
+        v0 = csm(self.line0) # q *
         # RCM: context of line0
-        h = tf.zeros((self.config.q))# vector of size q
-        h = tf.sigmoid(tf.mul(self.M, tf.concat([v0, h], 0)))# vector of size q
-        cv0 = rcm(h)
+        h = tf.zeros((self.config.q))# q *
+        h = tf.sigmoid(tf.matmul(self.M, tf.concat([v0, h], axis = 0)))# q *
+        cv0 = rcm(h) # q * 4
         # RGM: generate line1
         dist1, line1  = rgm(cv0)
         # CSM: line1 to vector
@@ -67,18 +73,39 @@ class TranslatorQuatrain5(Model):
         return tf.concat([dist1, dist2, dist3], axis = -1) # 5 * 3 * v
 
     def csm(lineX):
+        """
+        Use a convolutional network to convert a line of 5 char vector to a single vector
+
+        The filter sizes are q * 2 for C12, q * 2 for C22, and q * 3 for C33.
+        """
         T1 = tf.nn.embedding_lookup(self.L, lineX) # 5 * q
-        T2 = tf.concat([tf.reduce_sum(tf.nn.embedding_lookup(T1, [i, i + 1]) * self.C12, axis = 0) for i in xrange(4)], axis = 1)# 4 * q
-        T3 = tf.concat([tf.reduce_sum(tf.nn.embedding_lookup(T2, [i, i + 1]) * self.C22, axis = 0) for i in xrange(3)], axis = 1)# 3 * q
-        T4 = tf.reduce_sum( tf.nn.embedding_lookup(T3, [0, 2]) ) * self.C23, axis = 0) , axis = 1)# vector of size q
+        arrT2 = [tf.nn.sigmoid( tf.reshape(tf.reduce_sum(tf.nn.embedding_lookup(T1, [i, i + 1]) * self.C12, axis = 0) , [1, q]) ) for i in xrange(4) ]
+        T2 = tf.concat(arrT2, axis = 0)# 4 * q
+        arrT3 = [tf.nn.sigmoid( tf.reshape(tf.reduce_sum(tf.nn.embedding_lookup(T2, [i, i + 1]) * self.C22, axis = 0) , [1, q]) ) for i in xrange(3) ]
+        T3 = tf.concat(arrT3, axis = 0)# 3 * q
+        T4 = tf.nn.sigmoid( tf.reduce_sum( T3 * self.C33, axis = 0) ) # q *
+        return T4
     def rcm(hs):
-        u00 = tf.sigmoid(tf.mul(self.U0, hs)) # q*q
-        u01 = tf.sigmoid(tf.mul(self.U1, hs))# q*q
-        u02 = tf.sigmoid(tf.mul(self.U2, hs))# q*q
-        u03 = tf.sigmoid(tf.mul(self.U3, hs))# q*q
-        return tf.concat([u00, u01, u02, u03], axis = 1)
+        """
+        ui is the context used to generate the (i+1)th char in the next line.
+        """
+        u0 = tf.sigmoid(tf.matmul(self.U0, hs)) # q * 1
+        u1 = tf.sigmoid(tf.matmul(self.U1, hs))# q * 1
+        u2 = tf.sigmoid(tf.matmul(self.U2, hs))# q * 1
+        u3 = tf.sigmoid(tf.matmul(self.U3, hs))# q * 1
+        return tf.concat([u0, u1, u2, u3], axis = 1)
     def rgm(cv):
-        r = tf.zeros((self.config.q,))
+        """
+        Get the distribution of each position. Also get the predicted char for convenience.
+
+        input
+        cv: q * 4. Row i represents the context for generating the i + 1 th char
+
+        output:
+        dist:
+        line:
+        """
+        r = tf.zeros([self.config.q])
         y = tf.TensorArray()
         w = tf.TensorArray()
         for i in xrange(4):
