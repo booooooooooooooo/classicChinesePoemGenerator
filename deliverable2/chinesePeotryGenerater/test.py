@@ -1,6 +1,12 @@
 import tensorflow as tf
+from test1 import *
+from utils.general_utils import getOneHot
 
+print test()
 sess = tf.Session()
+a = getOneHot(3, 10)
+print a
+
 
 # T1 = tf.constant([[1,2,3], [4,5,6], [7,8,9]])
 # C12 = tf.constant([[2,2,2], [2,2,2]])
@@ -22,7 +28,15 @@ sess = tf.Session()
 # print sess.run(tf.multiply(a, a))
 
 
-
-a = [[1,2,3], [4,5,6]]
-b = [[2], [2], [2]]
-print tf.matmul(a, b)
+#
+# a = [[1,2,3], [4,5,6]]
+# b = [[2], [2], [2]]
+# print tf.matmul(a, b)
+#
+# a = []
+# a.append(tf.zeros([2,3]))
+#
+# a.append(tf.zeros([2,3]))
+#
+# a.append(tf.zeros([2,3]))
+# print a

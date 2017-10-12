@@ -1,5 +1,6 @@
 import tensorflow as tf
 import Model
+from utils.general_utils import *
 
 class Config(object):
     q = 5
@@ -8,8 +9,8 @@ class Config(object):
 
 class TranslatorQuatrain5(Model):
     def addPlaceHolder(self):
-        self.line0 = tf.placeholder( tf.int32, shape = [5,] )
-        self.line123 = tf.placeholder( tf.int32, shape = [5,3] )
+        self.line0 = tf.placeholder( tf.int32, shape = [5] )
+        self.line123 = tf.placeholder( tf.int32, shape = [15] )
     def addVariable(self):
         q = self.config.q
         v = self.config.v
@@ -35,7 +36,8 @@ class TranslatorQuatrain5(Model):
             self.Y = tf.get_variable("Y", [v, q])
     def getPredFunc(self):
         """
-        To get the probability distribution of each char in line2, 3 and 4.
+        To get the probability distribution of line234. The line is also returned for convenience.
+
         Those probability distributions are used to get cross entropy loss.
 
         CSM(convolutional sentence model) converts a line to a vector.
@@ -46,6 +48,8 @@ class TranslatorQuatrain5(Model):
         and chars from the current line to generate the current vector.
         Once a new line is generated from RGM, it goes into CSM again.......
         """
+        #TODO: do this function in TF graph, e.g. use TensorArray instead of []
+        #TODO: use a iteration to beautify this part
         # CSM: line0 to vector
         v0 = csm(self.line0) # q *
         # RCM: context of line0
@@ -57,20 +61,20 @@ class TranslatorQuatrain5(Model):
         # CSM: line1 to vector
         v1 = csm(line1)
         # RCM: context of line0 + line1
-        h = tf.sigmoid(tf.mul(self.M, tf.concat([v1, h], 0)))# vector of size q
+        h = tf.sigmoid(tf.matmul(self.M, tf.concat([v1, h], axis = 0)))#q*
         cv1 = rcm(h)
         # RGM: generate line2
         dist2, line2 = rgm(cv1)
         # CSM: line2 to vector
         v2 = csm(line2)
         # RCM: context of line0 + line1 + line2
-        h = tf.sigmoid(tf.mul(self.M, tf.concat([v2, h], 0)))# vector of size q
+        h = tf.sigmoid(tf.matmul(self.M, tf.concat([v2, h], axis = 0)))#q*
         cv2 = rcm(h)
         # RGM: generate line3
-        dist3, _ = rgm(cv2)
+        dist3, line3 = rgm(cv2)
 
         # return predicted function
-        return tf.concat([dist1, dist2, dist3], axis = -1) # 5 * 3 * v
+        return tf.concat([dist1, dist2, dist3], axis = 0), tf.concat([line1, line2, line3], axis = 0) # 15*v, 15*
 
     def csm(lineX):
         """
@@ -85,6 +89,7 @@ class TranslatorQuatrain5(Model):
         T3 = tf.concat(arrT3, axis = 0)# 3 * q
         T4 = tf.nn.sigmoid( tf.reduce_sum( T3 * self.C33, axis = 0) ) # q *
         return T4
+
     def rcm(hs):
         """
         ui is the context used to generate the (i+1)th char in the next line.
@@ -99,29 +104,47 @@ class TranslatorQuatrain5(Model):
         Get the distribution of each position. Also get the predicted char for convenience.
 
         input
-        cv: q * 4. Row i represents the context for generating the i + 1 th char
+        cv: a Tensor with shape q * 4. Row i represents the context for generating the i + 1 th char
 
         output:
-        dist:
-        line:
+
+        dist: a Tensor with shape 5 * v. Row i represents the prob distribution of the ith char.
+        line: a Tensor with shape 5 *. Entry i represents the ith char's index in V
         """
-        r = tf.zeros([self.config.q])
-        y = tf.TensorArray()
-        w = tf.TensorArray()
-        for i in xrange(4):
-            y[i] = tf.mul(self.Y, r)
-            w[i] = tf.argmax(y0)
-            r = tf.sigmoid( tf.mul(self.R, r) + tf.nn.embedding_lookup(self.X, [w[i]]) + tf.mul(self.X, tf.nn.embedding_lookup(cv, [i])) )
-        dist = tf.concat(y, axis = 1)
-        line = tf.concat(w, axis = 0)
+        prob = tf.constant(0.0)
+        dist = tf.constant([5, self.config.v])
+        line = tf.constant([5])
+        for i in xrange(self.config.v):
+            prob_, dist_, line_ = rgmHelper(i, cv)
+            if prob_ > prob:
+                prob = prob_
+                dist = dist_
+                line = line_
         return dist, line
 
+    def rgmHelper(i, cv):
+        #TODO: do this function in TF graph, e.g. use TensorArray instead of []
+        y = [getOneHot(i, self.config.v)]
+        w = [i]
+
+        r = tf.zeros([self.config.q])
+        for i in xrange(4):
+            r = tf.sigmoid( tf.matmul(self.R, r) + tf.nn.embedding_lookup(self.X, [w[i]]) + tf.matmul(self.H, tf.nn.embedding_lookup(cv, [i])) )
+            y.append( tf.matmul(self.Y, r) )
+            w.append( tf.argmax( y[i + 1] ) )
+        line = tf.constant(w)#5*
+        dist = tf.concat([tf.reshape(tf.nn.softmax(x), [1, self.config.v]) for x in y], axis = 0)#5*v
+        prob = 1.0
+        for i in xrange(5):
+            prob *= dist[i][line[i]]
+        return prob, dist, line
+
+
     def getLossFunc(self, predFunc):
-        loss = tf.constant(0)
-        for i in xrange(predFunc.shape[0]):
-            for j in xrange(predFunc.shape[1]):
-                loss -= tf.log(predFunc[i][j][self.line123[i][j]])
+        dist, _ = predFunc # dist: 15 * v
+        loss = tf.reduce_mean([ -tf.log(dist[i, self.line234[i]]) for i in xrange(15)])
         return loss
+
     def getTrainOp(self, loss):
         optimizer = tf.train.AdamOptimizer(self.config.lr)
         train_op = optimizer.minimize(loss)
@@ -131,8 +154,8 @@ class TranslatorQuatrain5(Model):
         sess.run(self.train_op, {self.line0 : inputTrain, self.line123 : labelTrain})
 
     def predict(self, sess, inputPred):
-        labelPred = sess.run(self.predFunc, {self.line0 : inputPred
-        return labelPred
+        dist, line = sess.run(self.predFunc, {self.line0 : inputPred
+        return line
 
     def __init__(self, config):
         self.config = Config()
@@ -142,10 +165,12 @@ def sanity_test():
     model = TranslatorQuatrain5()
     sess= tf.Session()
     inputTrain = tf.constant([1,2,3,4,5])
-    labelTrain = tf.constant([ [1,2,3,4,5], [6,7,8,9,0], [2,4,6,8,0] ])
+    labelTrain = tf.constant([ 1,2,3,4,5,6,7,8,9,0,2,4,6,8,0 ])
     inputPred = tf.constant([1,3,5,7,9])
-    model.train(sess, inputTrain, labelTrain)
+    for i in xrange(1000):
+        model.train(sess, inputTrain, labelTrain)
     labelPred = model.predict(sess, inputPred)
+
     print labelPred
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 class Model(object):
     def addPlaceHolder(self):
-
+        
     def addVariable(self):
 
     def getPredFunc(self):
