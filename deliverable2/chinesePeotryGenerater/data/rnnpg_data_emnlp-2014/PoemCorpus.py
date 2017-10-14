@@ -21,7 +21,7 @@ def rawpoem2stdF(infile, outfile):
         newline = '\t'.join(newsens) + '\n'
         if len(newline.strip()) > 0:
             uwrite(fout, newline)
-    
+
     fout.close()
 
 def rawpoem2std(indir, outdir):
@@ -30,7 +30,7 @@ def rawpoem2std(indir, outdir):
             inname = os.path.join(indir, f)
             outname = os.path.join(outdir, f)
             rawpoem2stdF(inname, outname)
-            
+
             print 'rawpoem to std poem %s done!' % inname
     else:
         rawpoem2stdF(indir, outdir)
@@ -44,7 +44,7 @@ def countSenNumCharNumF(infile):
         sen_num += len(fields)
         for field in fields:
             char_num += len(field.strip().split())
-    
+
     return (char_num, sen_num)
 
 def countSenNumCharNum(infile):
@@ -57,7 +57,7 @@ def countSenNumCharNum(infile):
             (cnum, snum) = countSenNumCharNumF(fname)
             char_num += cnum
             sen_num += snum
-        
+
         return (char_num, sen_num)
 
 if __name__ == '__main__':
@@ -67,11 +67,10 @@ if __name__ == '__main__':
     parser.add_argument('input')
     parser.add_argument('-o', '--output')
     args = parser.parse_args();
-    
+
     if args.raw2std:
         print 'rawpoems to standard poems'
         rawpoem2std(args.input, args.output)
     elif args.count:
         print 'count the number of sentences and characters in a file or folder'
         print 'number of characters are %d, number of sentences are %d' % countSenNumCharNum(args.input)
-

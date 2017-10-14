@@ -1,42 +1,40 @@
 import tensorflow as tf
-from test1 import *
-from utils.general_utils import getOneHot
+import numpy as np
 
-print test()
-sess = tf.Session()
-a = getOneHot(3, 10)
-print a
+sample_size = 80
+feature_size = 10
+class_size = 20
+lr = 0.5
 
+## Construct a model with only one softmax activation layer.
+x = tf.placeholder(tf.float32, (sample_size, feature_size))
+y = tf.placeholder(tf.float32, (sample_size, class_size))
 
-# T1 = tf.constant([[1,2,3], [4,5,6], [7,8,9]])
-# C12 = tf.constant([[2,2,2], [2,2,2]])
-#
-# print tf.reduce_sum(tf.nn.embedding_lookup(T1, [0, 1]) * C12, axis = 0)
-# print sess.run( tf.reduce_sum(tf.nn.embedding_lookup(T1, [0, 1]) * C12, axis = 0) )
-#
-# print [tf.reduce_sum(tf.nn.embedding_lookup(T1, [i, i+1]) * C12, axis = 0) for i in xrange(2)]
-# print sess.run( [tf.reduce_sum(tf.nn.embedding_lookup(T1, [i, i+1]) * C12, axis = 0) for i in xrange(2)] )
-#
-# print tf.concat([tf.reshape(tf.reduce_sum(tf.nn.embedding_lookup(T1, [i, i+1]) * C12, axis = 0), [1,3]) for i in xrange(2)], axis = 0)
-# print sess.run( tf.concat([tf.reshape(tf.reduce_sum(tf.nn.embedding_lookup(T1, [i, i+1]) * C12, axis = 0), [1,3]) for i in xrange(2)], axis = 0))
+w = tf.Variable(tf.zeros((feature_size, class_size)))
+b = tf.Variable(tf.zeros((class_size,)))
 
+z = tf.add( tf.matmul(x, w), b )
+y_hat = tf.nn.softmax(z)
 
+## Define loss function
+loss_ce = -tf.reduce_sum( y * tf.log(y_hat) ) / sample_size
 
-# a = [[1,2,3], [4,5,6]]
-# b = [[1,1], [2,2], [3,3]]
-# print sess.run(tf.matmul(a, b))
-# print sess.run(tf.multiply(a, a))
+## Define optimization.
+optimizer = tf.train.GradientDescentOptimizer(lr)
+train_op = optimizer.minimize(loss_ce)
 
+## Define train set
+inputs = np.random.rand(sample_size, feature_size)
+ground_truth = np.zeros((sample_size, class_size), dtype=np.int32)
+ground_truth[:, 0] = 1
 
-#
-# a = [[1,2,3], [4,5,6]]
-# b = [[2], [2], [2]]
-# print tf.matmul(a, b)
-#
-# a = []
-# a.append(tf.zeros([2,3]))
-#
-# a.append(tf.zeros([2,3]))
-#
-# a.append(tf.zeros([2,3]))
-# print a
+feed = {x : inputs, y : ground_truth }
+## Run
+sess = tf.Session() #stateful
+sess.run(tf.global_variables_initializer() )
+
+writer = tf.summary.FileWriter("log", sess.graph)
+for i in range(1000):
+    _, loss = sess.run([train_op, loss_ce], feed)
+    # print loss
+writer.close()

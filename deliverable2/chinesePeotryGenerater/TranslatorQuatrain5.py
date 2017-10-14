@@ -9,6 +9,7 @@ class Config(object):
 
 class TranslatorQuatrain5(Model):
     def addPlaceHolder(self):
+        #TODO: change dim of placeholder to batches, and update every other method....
         self.line0 = tf.placeholder( tf.int32, shape = [5] )
         self.line123 = tf.placeholder( tf.int32, shape = [15] )
     def addVariable(self):
