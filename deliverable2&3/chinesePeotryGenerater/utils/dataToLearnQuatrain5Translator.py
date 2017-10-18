@@ -3,7 +3,7 @@
 
 ENCODE = 'utf-8'
 
-class DataSet:
+class DataToLearnQuatrain5Translator:
     def __init__(self, trainPath=None, validPath = None, testPath = None):
         if not trainPath:
             trainPath = "./data/boQuatrain5/qtrain"
@@ -43,10 +43,7 @@ class DataSet:
         return self.getData("test")
 
 def sanity_test():
-    dataSet = DataSet()
-    inputTrain, labelTrain = dataSet.getTestData()
-    print len(inputTrain)
-    print len(labelTrain)
+    
 
 if __name__ == "__main__":
     sanity_test()

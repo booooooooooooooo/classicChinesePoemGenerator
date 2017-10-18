@@ -150,6 +150,12 @@ class TranslatorQuatrain5(Model):
         optimizer = tf.train.AdamOptimizer(self.config.lr)
         train_op = optimizer.minimize(loss)
         return train_op
+    def build():
+        self.addPlaceHolder()
+        self.addVariable()
+        self.predFunc = self.getPredFunc()
+        self.lossFunc = self.getLossFunc(self.predFunc)
+        self.trainOp = self.getTrainOp()
 
     def train(self, sess, inputTrain, labelTrain):
         sess.run(self.train_op, {self.line0 : inputTrain, self.line123 : labelTrain})
@@ -159,11 +165,11 @@ class TranslatorQuatrain5(Model):
         return line
 
     def __init__(self, config):
-        self.config = Config()
+        self.config = config
         self.build()
 
 def sanity_test():
-    model = TranslatorQuatrain5()
+    model = TranslatorQuatrain5(new Config())
     sess= tf.Session()
     inputTrain = tf.constant([1,2,3,4,5])
     labelTrain = tf.constant([ 1,2,3,4,5,6,7,8,9,0,2,4,6,8,0 ])
