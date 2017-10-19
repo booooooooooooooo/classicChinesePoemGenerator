@@ -1,3 +1,4 @@
+import tensorflow as tf
 from nltk.corpus.reader.plaintext import PlaintextCorpusReader
 
 class DataToLearnWFV:
@@ -12,20 +13,21 @@ class DataToLearnWFV:
         corpus = PlaintextCorpusReader(corpusdir, '.*').raw()
         self.wordList = ''.join(set( corpus.split() ))
 
-    def getWordList(self):
-        return self.wordList
-
     def getV(self):
         return len(self.wordList)
 
     def getWindowData(self, path):
-        data = {}
+        inputData = []
+        label = []
         fin = open(path)
         charList = fin.read().decode(self.ENCODE).split()
         for i in range(0, len(charList) - self.WINDOW_SIZE):
-            data[charList[i + self.WINDOW_SIZE / 2]] = charList[i : i + self.WINDOW_SIZE / 2] + charList[i + self.WINDOW_SIZE / 2 + 1 : i + self.WINDOW_SIZE]
+            wp = charList[i + self.WINDOW_SIZE / 2]
+            wc = charList[i + self.WINDOW_SIZE / 2 + 1 : i + self.WINDOW_SIZE]
+            inputData.append(self.wordList.index( wp ))
+            label.append( [self.wordList.index(w) for w in wc] )
         fin.close()
-        return data
+        return inputData, label
 
     def getTrain(self):
         return self.getWindowData(self.trainPath)
