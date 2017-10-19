@@ -6,7 +6,7 @@ class NPLM(object):
         with tf.variable_scope("inputEmbeddingLayer"):
             self.cw = tf.placeholder(tf.int32, shape = [None, self.config.WINDOW_SIZE - 1])
         with tf.variable_scope("outputLayer"):
-            self.pw = tf.placeholder(tf.int32, shape = tf.reshape( tf.shape(self.cw)[0] , [-1]) )
+            self.pw = tf.placeholder(tf.int32, shape =  [None] )
     def addVariable(self):
         with tf.variable_scope("inputEmbeddingLayer"):
             self.C = tf.get_variable("C", [self.config.V, self.config.dim])
@@ -18,7 +18,7 @@ class NPLM(object):
             self.b = tf.get_variable("b", [self.config.V])
 
     def getLossFunc(self):
-        x = tf.reshape( tf.nn.embedding_lookup(self.C, self.cw), shape = [ tf.shape(self.cw)[0], -1] ) #  batch size * (dim*(WINDOW_SIZE - 1) )
+        x = tf.reshape( tf.nn.embedding_lookup(self.C, self.cw), shape = [-1, self.config.dim * (self.config.WINDOW_SIZE - 1)] ) #  batch size * (dim*(WINDOW_SIZE - 1) )
         z1 = self.d + tf.matmul(x, self.H)#  batch size * h
         h1 = tf.tanh(z1)#  batch size * h
         logits = self.b + tf.matmul(h1, self.U)#  batch size * V
@@ -34,27 +34,29 @@ class NPLM(object):
         self.lossFunc = self.getLossFunc()
         self.trainOp = self.getTrainOp(self.lossFunc)
 
-    def train(self, sess, input, label):
-        _ , loss = sess.run([self.trainOp, self.lossFunc], {self.cw : input, self.pw : label})
+    def train(self, sess, inputData, label):
+        _ , loss = sess.run([self.trainOp, self.lossFunc], {self.cw : inputData, self.pw : label})
         return loss
-    def valid(self, sess, input, label):
-        loss = sess.run(self.lossFunc,  {self.cw : input, self.pw : label})
+    def valid(self, sess, inputData, label):
+        loss = sess.run(self.lossFunc,  {self.cw : inputData, self.pw : label})
         return loss
     def fit(self, sess):
         #writer = tf.summary.FileWriter("log", sess.graph)
         bestLoss = sys.float_info.max
         for epoch in xrange(self.config.n_epoches):
-            print "***********Train epoch " + epoch
+            print "***********Train epoch {:}****************".format(epoch)
             trainInput, trainLabel = self.config.dataTOLearnWFV.getTrain()
             trainLoss = self.train(sess, trainInput, trainLabel)
             validInput, validLabel = self.config.dataTOLearnWFV.getValid()
             validLoss = self.valid(sess, validInput, validLabel)
-            print "epoch " + epoch + "Train Loss " + trainLoss + "ValidLoss " + validLoss
+            print "***********epoch {:}, Train Loss {:}, Valid Loss {:}**************** ".format(epoch, trainLoss, validLoss)
             if validLoss < bestLoss:
                 print "Better word feature vectors found! Writting to disk...."
-                fout = open(self.config.filePathWFV, "w")
-                fout.write(self.C)
-                fout.close()
+                #TODO: write to disk instead of printing out
+                print sess.run(self.C)
+                # fout = open(self.config.filePathWFV, "w")
+                # fout.write(self.C)
+                # fout.close()
                 print "File writting done!"
         #writer.close()
     def __init__(self, config):

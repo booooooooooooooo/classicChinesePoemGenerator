@@ -22,15 +22,15 @@ class DataToLearnWFV:
         fin = open(path)
         charList = fin.read().decode(self.ENCODE).split()
         for i in range(0, len(charList) - self.WINDOW_SIZE):
-            wp = charList[i + self.WINDOW_SIZE / 2]
             wc = charList[i : i + self.WINDOW_SIZE / 2] +  charList[i + self.WINDOW_SIZE / 2 + 1 : i + self.WINDOW_SIZE]
-            inputData.append(self.wordList.index( wp ))
-            newLabel = [self.wordList.index(w) for w in wc]
-            label.append(newLabel )
+            wp = charList[i + self.WINDOW_SIZE / 2]
+            inputData.append( [self.wordList.index(w) for w in wc])
+            label.append( self.wordList.index( wp ) )
             # print newLabel
 
         fin.close()
-        return inputData, label
+        #TODO: change to real size
+        return inputData[0 : 100], label[0:100]
 
     def getTrain(self):
         return self.getWindowData(self.trainPath)
