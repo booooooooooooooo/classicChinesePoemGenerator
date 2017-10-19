@@ -2,7 +2,7 @@ import tensorflow as tf
 from nltk.corpus.reader.plaintext import PlaintextCorpusReader
 
 class DataToLearnWFV:
-    def __init__(self, ENCODE = 'utf-8', WINDOW_SIZE = 4, corpusdir = './data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/', trainPath = './data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/qtrain', validPath = './data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/qvalid', testPath = './data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/qtest'):
+    def __init__(self, ENCODE = 'utf-8', WINDOW_SIZE = 4, corpusdir = '/Users/bo/Documents/297And8/deliverable2And3/chinesePeotryGenerater/utils/data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/', trainPath = '/Users/bo/Documents/297And8/deliverable2And3/chinesePeotryGenerater/utils/data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/qtrain', validPath = '/Users/bo/Documents/297And8/deliverable2And3/chinesePeotryGenerater/utils/data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/qvalid', testPath = '/Users/bo/Documents/297And8/deliverable2And3/chinesePeotryGenerater/utils/data/rnnpg_data_emnlp-2014/partitions_in_Table_2/rnnpg/qtest'):
         self.ENCODE = ENCODE
         self.WINDOW_SIZE = WINDOW_SIZE
         self.corpusdir = corpusdir
@@ -23,9 +23,12 @@ class DataToLearnWFV:
         charList = fin.read().decode(self.ENCODE).split()
         for i in range(0, len(charList) - self.WINDOW_SIZE):
             wp = charList[i + self.WINDOW_SIZE / 2]
-            wc = charList[i + self.WINDOW_SIZE / 2 + 1 : i + self.WINDOW_SIZE]
+            wc = charList[i : i + self.WINDOW_SIZE / 2] +  charList[i + self.WINDOW_SIZE / 2 + 1 : i + self.WINDOW_SIZE]
             inputData.append(self.wordList.index( wp ))
-            label.append( [self.wordList.index(w) for w in wc] )
+            newLabel = [self.wordList.index(w) for w in wc]
+            label.append(newLabel )
+            # print newLabel
+
         fin.close()
         return inputData, label
 
@@ -45,8 +48,10 @@ class DataToLearnWFV:
 
 def sanity_check():
     data = DataToLearnWFV()
-    for key in data.getTrain():
-        print key
+    trainInput, trainLabel  = data.getTrain()
+    print len(trainInput), len(trainLabel)
+    # for i in xrange(len(trainInput)):
+    #     print trainInput[i], trainLabel[i]
 
 
 if __name__ == "__main__":
