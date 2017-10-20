@@ -1,5 +1,71 @@
 import tensorflow as tf
 import sys
+import os
+from sets import Set
+
+
+class Config(object):
+    def __init__(self, lr, dim, h, WINDOW_SIZE, dirToSaveModel, dirToLog):
+        self.lr = lr
+        self.dim = dim
+        self.h = h
+        self.WINDOW_SIZE = WINDOW_SIZE
+        self.pathToSaveModel = dirToSaveModel
+        self.dirToLog = dirToLog
+
+
+class NPLMODM(object):
+    def __init__(self, WINDOW_SIZE = 4, proportion = 0.1, ENCODE = 'utf-8', corpusdir = './utils/q5/', trainPath = './utils/q5/qtrain', validPath = './utils/q5/qvalid', testPath = './utils/q5/qtest'):
+        self.ENCODE = ENCODE
+        self.WINDOW_SIZE = WINDOW_SIZE
+        self.corpusdir = corpusdir
+        self.trainPath = trainPath
+        self.validPath = validPath
+        self.testPath = testPath
+
+        self.wordList = self.makeWordList(ENCODE, corpusdir, proportion)
+        self.trainData = self.makeWindowData(ENCODE, trainPath,WINDOW_SIZE, self.wordList, proportion)
+        self.validData = self.makeWindowData(ENCODE, validPath,WINDOW_SIZE, self.wordList, proportion)
+        self.testData = self.makeWindowData(ENCODE, testPath, WINDOW_SIZE,self.wordList, proportion)
+
+    def makeWordList(self, ENCODE, corpusdir, proportion):
+        corpus = []
+        for filePath in os.listdir(corpusdir):
+            fin = open(corpusdir + filePath)
+            charList = list(fin.read().decode(ENCODE))
+            charList = charList[0 : int(proportion * len(charList) )]
+            corpus += charList
+        wordList = list( Set( corpus ) )
+        #TODO: \n or blank are in wordList; other punctuations are not in wordList
+        return wordList
+
+
+    def makeWindowData(self, ENCODE, path, WINDOW_SIZE, wordList, proportion):
+        inputData = []
+        label = []
+        fin = open(path)
+        charList = list(fin.read().decode(ENCODE))
+        charList = charList[0 : int(proportion * len(charList) )]
+        for i in range(0, len(charList) - WINDOW_SIZE):
+            wc = charList[i : i + WINDOW_SIZE / 2] +  charList[i + WINDOW_SIZE / 2 + 1 : i + WINDOW_SIZE]
+            wp = charList[i + WINDOW_SIZE / 2]
+            inputData.append( [wordList.index(w) for w in wc])
+            label.append( wordList.index( wp ) )
+        fin.close()
+        return inputData, label
+
+    def getV(self):
+        return len(self.wordList)
+    def getWordList(self):
+        return self.wordList
+    def getTrainData(self):
+        return self.trainData
+    def getValidData(self):
+        return self.validData
+    def getTestData(self):
+        return self.testData
+
+
 
 class NPLM(object):
     def addPlaceHolder(self):
@@ -7,13 +73,13 @@ class NPLM(object):
         self.pw = tf.placeholder(tf.int32, shape =  [None] , name = "predictedWord")
     def addVariable(self):
         with tf.variable_scope("embeddingLayer"):
-            self.C = tf.get_variable("C", [self.config.V, self.config.dim])
+            self.C = tf.get_variable("C", [self.odm.getV(), self.config.dim])
         with tf.variable_scope("hiddenLayer"):
             self.H = tf.get_variable("H", [self.config.dim * (self.config.WINDOW_SIZE - 1), self.config.h])
             self.d = tf.get_variable("d", [self.config.h])
         with tf.variable_scope("outputLayer"):
-            self.U = tf.get_variable("U", [self.config.h, self.config.V])
-            self.b = tf.get_variable("b", [self.config.V])
+            self.U = tf.get_variable("U", [self.config.h, self.odm.getV()])
+            self.b = tf.get_variable("b", [self.odm.getV()])
 
     def getLossFunc(self):
         x = tf.reshape( tf.nn.embedding_lookup(self.C, self.cw), shape = [-1, self.config.dim * (self.config.WINDOW_SIZE - 1)] ) #  batch size * (dim*(WINDOW_SIZE - 1) )
@@ -35,31 +101,89 @@ class NPLM(object):
     def train(self, sess, inputData, label):
         _ , loss = sess.run([self.trainOp, self.lossFunc], {self.cw : inputData, self.pw : label})
         return loss
-    def valid(self, sess, inputData, label):
-        loss = sess.run(self.lossFunc,  {self.cw : inputData, self.pw : label})
+
+    def predict(self, sess, inputData, label):
+        loss = sess.run(self.lossFunc, {self.cw : inputData, self.pw : label} )
         return loss
+
     def fit(self, sess):
-        writer = tf.summary.FileWriter("log", sess.graph)
-        bestLoss = sys.float_info.max
-        for epoch in xrange(self.config.n_epoches):
+        prevValidLoss = sys.float_info.max
+
+        trainLoss = sys.float_info.max
+        validLoss = sys.float_info.max
+
+        epoch = 0
+
+        while 1 :
             print "***********Fitting Epoch {:}****************".format(epoch)
-            trainInput, trainLabel = self.config.dataTOLearnWFV.getTrain()
+            trainInput, trainLabel = self.odm.getTrainData()
+            validInput, validLabel = self.odm.getValidData()
+
             trainLoss = self.train(sess, trainInput, trainLabel)
-            validInput, validLabel = self.config.dataTOLearnWFV.getValid()
-            validLoss = self.valid(sess, validInput, validLabel)
+            validLoss = self.predict(sess, validInput, validLabel)
+
             print "Train Loss   {:} \n Valid Loss   {:}".format(trainLoss, validLoss)
-            if validLoss < bestLoss:
-                print "Better model found! Saving......"
-                save_path = tf.train.Saver().save(sess, self.config.filePathWFV)
-                print("Model saved in file: %s" % save_path)
-        writer.close()
-    def evaluate(self, sess):
-        #TODO: feed in data to evaluate
-        print "*******Restoring best model so far******"
-        saver = tf.train.Saver()
-        saver.restore(sess, self.config.filePathWFV)
-        print "he word feature matrix from best model so far is"
-        print sess.run(self.C)
-    def __init__(self, config):
+            epoch += 1
+
+            if validLoss > prevValidLoss:
+                break
+            else:
+                prevValidLoss = validLoss
+
+        print "*********Training finished!*********"
+
+        print "*********Testing model***********"
+        testInput, testLabel = self.odm.getTestData()
+        testLoss = self.predict(sess, testInput, testLabel)
+        print "Test Loss   {:} ".format(testLoss)
+
+        print "*********Summary********************"
+        print self.C
+        print self.config
+        print trainLoss
+        print validLoss
+        print testLoss
+
+        return trainLoss, validLoss, testLoss
+
+    def __init__(self, config, odm):
         self.config = config
+        self.odm = odm
         self.build()
+
+
+
+
+def sanity_NPLMADT():
+    adt = NPLMADT()
+    trainInput, trainLabel = adt.getTrainData()
+    validInput, validLabel = adt.getValidData()
+    testInput, testLabel = adt.getTestData()
+    # print adt.getV()
+    # print len(trainInput), len(trainLabel)
+    # print len(validInput), len(validLabel)
+    # print len(testInput), len(testLabel)
+    '''
+    5339
+    233054 233054
+    20996 20996
+    21521 21521
+    '''
+def sanity_NPLM():
+    config = Config(0.5, 50, 30, 6,  "./model/", "./log" )
+    odm = NPLMODM(WINDOW_SIZE = config.WINDOW_SIZE, proportion = 0.1)
+    with tf.Graph().as_default():
+        model = NPLM(config, odm)
+        with tf.Session() as session:
+            # writer = tf.summary.FileWriter(config.dirToLog, session.graph)
+            session.run( tf.global_variables_initializer() )
+            trainLoss, validLoss, testLoss = model.fit(session)
+            # writer.close()
+
+#
+# def tune():
+#     #TODO: how to handle tf when iterating over diffrent configs
+
+if __name__ == "__main__":
+    # sanity_NPLMADT()
+    sanity_NPLM()
