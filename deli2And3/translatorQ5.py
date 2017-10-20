@@ -2,12 +2,13 @@ import tensorflow as tf
 import Model
 from utils.general_utils import *
 
+#TODO: check all filepath
 class Config(object):
     q = 5
     v = 30
     lr = 0.5
 
-class TranslatorQuatrain5(Model):
+class TranslatorQ5(Model):
     def addPlaceHolder(self):
         #TODO: change dim of placeholder to batches, and update every other method....
         self.line0 = tf.placeholder( tf.int32, shape = [5] )

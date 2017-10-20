@@ -2,8 +2,8 @@
 # -*- coding:utf-8 -*-
 
 ENCODE = 'utf-8'
-
-class DataToLearnQuatrain5Translator:
+#TODO: check all filepath
+class TranslatorQ5ADT:
     def __init__(self, trainPath=None, validPath = None, testPath = None):
         if not trainPath:
             trainPath = "./data/boQuatrain5/qtrain"
@@ -43,7 +43,7 @@ class DataToLearnQuatrain5Translator:
         return self.getData("test")
 
 def sanity_test():
-    
+
 
 if __name__ == "__main__":
     sanity_test()

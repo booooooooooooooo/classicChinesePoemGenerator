@@ -16,15 +16,8 @@ class Config(object):
 
 
 # def tune():
-#     dataTOLearnWFV = DataToLearnWFV()
 #     #TODO: how to handle tf when iterating over diffrent configs
-#     config = Config()#TODO: give parameters to Config
-#     with tf.Graph().as_default():
-#         model = NPLM(config)
-#         with tf.Session() as session:
-#             init = tf.global_variables_initializer()
-#             session.run(init)
-#             model.fit(session)
+
 
 def sanity_check():
     dataTOLearnWFV = DataToLearnWFV()
