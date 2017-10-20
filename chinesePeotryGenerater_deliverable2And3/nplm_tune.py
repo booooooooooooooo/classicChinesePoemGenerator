@@ -35,6 +35,7 @@ def sanity_check():
             init = tf.global_variables_initializer()
             session.run(init)
             model.fit(session)
+            model.evaluate(session)
 
 if __name__ == "__main__":
     sanity_check()

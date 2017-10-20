@@ -3,12 +3,10 @@ import sys
 
 class NPLM(object):
     def addPlaceHolder(self):
-        with tf.variable_scope("inputEmbeddingLayer"):
-            self.cw = tf.placeholder(tf.int32, shape = [None, self.config.WINDOW_SIZE - 1])
-        with tf.variable_scope("outputLayer"):
-            self.pw = tf.placeholder(tf.int32, shape =  [None] )
+        self.cw = tf.placeholder(tf.int32, shape = [None, self.config.WINDOW_SIZE - 1], name = "contextWords")
+        self.pw = tf.placeholder(tf.int32, shape =  [None] , name = "predictedWord")
     def addVariable(self):
-        with tf.variable_scope("inputEmbeddingLayer"):
+        with tf.variable_scope("embeddingLayer"):
             self.C = tf.get_variable("C", [self.config.V, self.config.dim])
         with tf.variable_scope("hiddenLayer"):
             self.H = tf.get_variable("H", [self.config.dim * (self.config.WINDOW_SIZE - 1), self.config.h])
@@ -41,24 +39,27 @@ class NPLM(object):
         loss = sess.run(self.lossFunc,  {self.cw : inputData, self.pw : label})
         return loss
     def fit(self, sess):
-        #writer = tf.summary.FileWriter("log", sess.graph)
+        writer = tf.summary.FileWriter("log", sess.graph)
         bestLoss = sys.float_info.max
         for epoch in xrange(self.config.n_epoches):
-            print "***********Train epoch {:}****************".format(epoch)
+            print "***********Fitting Epoch {:}****************".format(epoch)
             trainInput, trainLabel = self.config.dataTOLearnWFV.getTrain()
             trainLoss = self.train(sess, trainInput, trainLabel)
             validInput, validLabel = self.config.dataTOLearnWFV.getValid()
             validLoss = self.valid(sess, validInput, validLabel)
-            print "***********epoch {:}, Train Loss {:}, Valid Loss {:}**************** ".format(epoch, trainLoss, validLoss)
+            print "Train Loss   {:} \n Valid Loss   {:}".format(trainLoss, validLoss)
             if validLoss < bestLoss:
-                print "Better word feature vectors found! Writting to disk...."
-                #TODO: write to disk instead of printing out
-                print sess.run(self.C)
-                # fout = open(self.config.filePathWFV, "w")
-                # fout.write(self.C)
-                # fout.close()
-                print "File writting done!"
-        #writer.close()
+                print "Better model found! Saving......"
+                save_path = tf.train.Saver().save(sess, self.config.filePathWFV)
+                print("Model saved in file: %s" % save_path)
+        writer.close()
+    def evaluate(self, sess):
+        #TODO: feed in data to evaluate
+        print "*******Restoring best model so far******"
+        saver = tf.train.Saver()
+        saver.restore(sess, self.config.filePathWFV)
+        print "he word feature matrix from best model so far is"
+        print sess.run(self.C)
     def __init__(self, config):
         self.config = config
         self.build()
