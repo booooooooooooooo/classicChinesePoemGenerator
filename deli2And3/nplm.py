@@ -107,28 +107,16 @@ class NPLM(object):
         return loss
 
     def fit(self, sess):
-        prevValidLoss = sys.float_info.max
-
         trainLoss = sys.float_info.max
         validLoss = sys.float_info.max
 
-        epoch = 0
-
-        while 1 :
+        for epoch in xrange(10000) :
             print "***********Fitting Epoch {:}****************".format(epoch)
             trainInput, trainLabel = self.odm.getTrainData()
             validInput, validLabel = self.odm.getValidData()
-
             trainLoss = self.train(sess, trainInput, trainLabel)
             validLoss = self.predict(sess, validInput, validLabel)
-
-            print "Train Loss   {:} \n Valid Loss   {:}".format(trainLoss, validLoss)
-            epoch += 1
-
-            if validLoss > prevValidLoss:
-                break
-            else:
-                prevValidLoss = validLoss
+            print "Train Loss   {:} \nValid Loss   {:}".format(trainLoss, validLoss)
 
         print "*********Training finished!*********"
 
@@ -159,18 +147,13 @@ def sanity_NPLMADT():
     trainInput, trainLabel = adt.getTrainData()
     validInput, validLabel = adt.getValidData()
     testInput, testLabel = adt.getTestData()
-    # print adt.getV()
-    # print len(trainInput), len(trainLabel)
-    # print len(validInput), len(validLabel)
-    # print len(testInput), len(testLabel)
-    '''
-    5339
-    233054 233054
-    20996 20996
-    21521 21521
-    '''
+    print adt.getV()
+    print len(trainInput), len(trainLabel)
+    print len(validInput), len(validLabel)
+    print len(testInput), len(testLabel)
+
 def sanity_NPLM():
-    config = Config(0.5, 50, 30, 6,  "./model/", "./log" )
+    config = Config(10, 5, 3, 6,  "./model/", "./log" )
     odm = NPLMODM(WINDOW_SIZE = config.WINDOW_SIZE, proportion = 0.1)
     with tf.Graph().as_default():
         model = NPLM(config, odm)
@@ -182,7 +165,9 @@ def sanity_NPLM():
 
 #
 # def tune():
-#     #TODO: how to handle tf when iterating over diffrent configs
+#     #TODO: how to tune????????? 
+
+
 
 if __name__ == "__main__":
     # sanity_NPLMADT()
