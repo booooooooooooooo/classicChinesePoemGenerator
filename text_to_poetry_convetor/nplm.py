@@ -15,7 +15,7 @@ class Config(object):
 
 
 class NPLMODM(object):
-    def __init__(self, WINDOW_SIZE = 4, proportion = 0.1, ENCODE = 'utf-8', corpusdir = './utils/q5/', trainPath = './utils/q5/qtrain', validPath = './utils/q5/qvalid', testPath = './utils/q5/qtest'):
+    def __init__(self, WINDOW_SIZE = 4, proportion = 0.1, ENCODE = 'utf-8', corpusdir = './data/q5/', trainPath = './data/q5/qtrain', validPath = './data/q5/qvalid', testPath = './data/q5/qtest'):
         self.ENCODE = ENCODE
         self.WINDOW_SIZE = WINDOW_SIZE
         self.corpusdir = corpusdir
@@ -153,7 +153,7 @@ def sanity_NPLMADT():
     print len(testInput), len(testLabel)
 
 def sanity_NPLM():
-    config = Config(10, 5, 3, 6,  "./model/", "./log" )
+    config = Config(10, 5, 3, 6,  "./saved_tf_model/", "./log_for_tensor_board" )
     odm = NPLMODM(WINDOW_SIZE = config.WINDOW_SIZE, proportion = 0.1)
     with tf.Graph().as_default():
         model = NPLM(config, odm)
@@ -165,7 +165,7 @@ def sanity_NPLM():
 
 #
 # def tune():
-#     #TODO: how to tune????????? 
+#     #TODO: how to tune?????????
 
 
 
