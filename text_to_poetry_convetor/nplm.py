@@ -6,6 +6,7 @@ import numpy as np
 
 from processData import prepareNPLMData
 from util import get_minibatches
+from scipy import spatial
 
 
 class Config(object):
@@ -37,6 +38,11 @@ class NPLMODM(object):
         return len(self.vocabularyDic)
     def getVocabularyDic(self):
         return self.vocabularyDic
+    def getRandomChars(self, n_chars):
+        chars = self.vocabularyDic.keys()
+        indices = np.arange(len(chars))
+        np.random.shuffle(indices)
+        return [chars[indices[i]] for i in xrange(n_chars)]
     def getAllData(self):
         return zip(*self.windowData)
     def getTrainData(self):
@@ -118,25 +124,36 @@ class NPLM(object):
 
         tf.train.Saver().restore(sess, self.config.pathToSaveModel + self.config.getStringOfParas())
         np.save(self.config.fileToSaveWordVectors, sess.run(self.C))
+        testData = self.odm.getTestData()
+        corTestLoss = self.predict(sess, testData)
         print "***Summary of model and config"
         print "Best valid Loss   {:} ".format(bestValidLoss)
         print "Cooresponding Train Loss   {:} ".format(corTrainLoss)
+        print "Cooresponding Test Loss   {:} ".format(corTestLoss)
         print "Parameters used :" + self.config.getStringOfParas()
         print "Word feature vectors saved in" + self.config.fileToSaveWordVectors
-        wordFeatureVectors = np.load(self.config.fileToSaveWordVectors)
-        print wordFeatureVectors
+
 
     def intrinsicEvaluation(self, sess):
         tf.train.Saver().restore(sess, self.config.pathToSaveModel + self.config.getStringOfParas())
+        wordFeatureVectors = np.load(self.config.fileToSaveWordVectors)
+        print wordFeatureVectors
         print "***Start intrinsic evaluation......"
-        testData = self.odm.getTestData()
-        corTestLoss = self.predict(sess, testData)
-        print "***Finish intrinsic evaluation. Test loss {:}".format(corTestLoss)
-    def extrinsicEvaluation(self, sess):
-        tf.train.Saver().restore(sess, self.config.pathToSaveModel + self.config.getStringOfParas())
-        print "***Start extrinsic evaluation......"
-        #TODO: real case word similarity
-        print "***Finish extrinsic evaluation"
+        n_chars = 30
+        chars = self.odm.getRandomChars(n_chars)
+        similarities = []
+        for i in xrange(n_chars):
+            for j in xrange(n_chars):
+                if j > i:
+                    a, b = wordFeatureVectors[ self.odm.getVocabularyDic()[chars[i]] ], wordFeatureVectors[ self.odm.getVocabularyDic()[chars[j]] ]
+                    score = (np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b)))
+                    similarities.append((chars[i], chars[j], score))
+        similarities = sorted(similarities, key=lambda sim: sim[2], reverse=True)
+        for sim in similarities:
+            print sim[0], sim[1], sim[2]
+
+        print "***Finish intrinsic evaluation. "
+
 
     def __init__(self, config, odm):
         self.config = config
@@ -147,7 +164,7 @@ class NPLM(object):
 
 
 def sanity_NPLMODM():
-    odm = NPLMODM()
+    odm = NPLMODM(1)
     trainInput, trainLabel = odm.getTrainData()
     validInput, validLabel = odm.getValidData()
     testInput, testLabel = odm.getTestData()
@@ -155,8 +172,16 @@ def sanity_NPLMODM():
     print len(validInput), len(validLabel)
     print len(testInput), len(testLabel)
 
+    # sample_chars = odm.getRandomChars(50)
+    # for char in sample_chars:
+    #     print char
+    wordFeatureVectors = np.load("./data/wordFeatureVector.txt")
+    a, b = wordFeatureVectors[0], wordFeatureVectors[1]
+    print np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))
+
 def sanity_NPLM():
-    config = Config(10, 10, 10, 1, 0, 50, "./data/wordFeatureVector.txt" , "./saved_tf_model/", "./log_for_tensor_board" )
+    #lr, dim, h, WINDOW_SIZE, n_epochs,batch_size, fileToSaveWordVectors, dirToSaveModel, dirToLog
+    config = Config(0.5, 30, 50, 5, 100, 50, "./data/wordFeatureVector.txt" , "./saved_tf_model/", "./log_for_tensor_board" )
     odm = NPLMODM(WINDOW_SIZE = config.WINDOW_SIZE)
     with tf.Graph().as_default():
         model = NPLM(config, odm)
@@ -165,7 +190,6 @@ def sanity_NPLM():
             session.run( tf.global_variables_initializer() )
             model.fit(session)
             model.intrinsicEvaluation(session)
-            model.extrinsicEvaluation(session)
             # writer.close()
 
 #
