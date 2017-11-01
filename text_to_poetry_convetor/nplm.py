@@ -15,59 +15,19 @@ class Config(object):
 
 
 class NPLMODM(object):
-    def __init__(self, corpusdir = './data/raw_std_poem_all_from_rnnpg_data_emnlp-2014/', ENCODE = 'utf-8', WINDOW_SIZE = 4, proportion = 1):
-        self.corpusdir = corpusdir
-        self.ENCODE = ENCODE
+    def __init__(self, WINDOW_SIZE = 1):
         self.WINDOW_SIZE = WINDOW_SIZE
-        self.wordList, self.allData, self.trainData, self.validData, self.testData = self.cookCorpus(corpusdir, ENCODE, WINDOW_SIZE, proportion)
+        self.vocabularyDic, self.windowData = prepareNPLMData(WINDOW_SIZE)
+        self.trainData = windowData[0 : 10000]
+        self.validData = windowData[10000 : 11000]
+        self.testData = windowData[11000 : 12000]
 
-    def cookCorpus(self, corpusdir, ENCODE, WINDOW_SIZE, proportion):
-        print "***Making wordList........."
-        wordList = self.makeWordList(ENCODE, corpusdir, proportion)
-        print "***Making allData........."
-        allData = self.makeWindowData(corpusdir, ENCODE, WINDOW_SIZE, wordList, proportion)
-        inputData, label = allData
-        print "***Making trainData........."
-        trainData = inputData[0 : len(inputData) * 0.96], label[0 : len(inputData) * 0.96]
-        print "***Making validData........."
-        validData = inputData[len(inputData) * 0.96 : len(inputData) * 0.98], label[len(inputData) * 0.96 : len(inputData) * 0.98]
-        print "***Making testData........."
-        testData = inputData[len(inputData) * 0.98 : ], label[len(inputData) * 0.98 : ]
-
-        return wordList, allData, trainData, validData, testData
-
-    def makeWordList(self, ENCODE, corpusdir, proportion):
-        corpus = []
-        for filePath in os.listdir(corpusdir):
-            fin = open(corpusdir + filePath)
-            charList = list(fin.read().decode(ENCODE))
-            charList = charList[0 : int(proportion * len(charList) )]
-            corpus += charList
-        wordList = list( Set( corpus ) )
-        #TODO: \n or blank are in wordList; other punctuations are not in wordList
-        return wordList
-
-
-    def makeWindowData(self, corpusdir, ENCODE, WINDOW_SIZE, wordList, proportion):
-        inputData = []
-        label = []
-        for filePath in os.listdir(corpusdir):
-            print "===processing file {:}".format(filePath)
-            fin = open(corpusdir + filePath)
-            charList = list(fin.read().decode(ENCODE))
-            charList = charList[0 : int(proportion * len(charList) )]
-            for i in range(0, len(charList) - WINDOW_SIZE):
-                wc = charList[i : i + WINDOW_SIZE / 2] +  charList[i + WINDOW_SIZE / 2 + 1 : i + WINDOW_SIZE]
-                wp = charList[i + WINDOW_SIZE / 2]
-                inputData.append( [wordList.index(w) for w in wc])
-                label.append( wordList.index( wp ) )
-            fin.close()
-        return inputData, label
-
-    def getVocSize(self):
-        return len(self.wordList)
-    def getWordList(self):
-        return self.wordList
+    def getVocabularySize(self):
+        return len(self.vocabularyDic)
+    def getVocabularyDic(self):
+        return self.vocabularyDic
+    def getAllData(self):
+        return self.windowData
     def getTrainData(self):
         return self.trainData
     def getValidData(self):
