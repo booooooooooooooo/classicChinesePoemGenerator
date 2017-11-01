@@ -37,7 +37,8 @@ def prepareNPLMData(WINDOW_SIZE):
     start = time.time()
 
     ENCODE = 'utf-8'
-    corpusdir = "./data/raw_std_poem_all_from_rnnpg_data_emnlp-2014/"
+    corpusdir = "./data/tiny_corpus/"
+    # corpusdir = "./data/raw_std_poem_all_from_rnnpg_data_emnlp-2014/"
     LINE_START = "<"
     LINE_END = ">"
 
@@ -46,10 +47,11 @@ def prepareNPLMData(WINDOW_SIZE):
     corpus.append(LINE_START)
     corpus.append(LINE_END)
     for filePath in os.listdir(corpusdir):
-        print "===processing file {:}".format(filePath)
-        fin = open(corpusdir + filePath)
-        charList = fin.read().decode(ENCODE).split()# only chinese characters
-        corpus += charList
+        if filePath != ".DS_Store":
+            print "===processing file {:}".format(filePath)
+            fin = open(corpusdir + filePath)
+            charList = fin.read().decode(ENCODE).split()# only chinese characters
+            corpus += charList
     wordList = list( Set( corpus ) )
     # print len(wordList)
     # print wordList[0]
@@ -66,23 +68,24 @@ def prepareNPLMData(WINDOW_SIZE):
     print "Making window data........"
     windowData = []
     for filePath in os.listdir(corpusdir):
-        print "===processing file {:}".format(filePath)
-        fin = open(corpusdir + filePath)
-        lines = fin.readlines()
-        for line in lines:
-            cleanedLine = line.decode(ENCODE).split() # decode and delete space and eol
-            for i in xrange(len(cleanedLine)):
-                center = vocabularyDic[ cleanedLine[i] ]
-                context = []
-                for j in range(i - WINDOW_SIZE, i + WINDOW_SIZE + 1):
-                    if j != i:
-                        if j < 0:
-                            context.append(vocabularyDic[LINE_START])
-                        elif j >= len(cleanedLine):
-                            context.append(vocabularyDic[LINE_END])
-                        else:
-                            context.append(vocabularyDic[cleanedLine[j]])
-                windowData.append((center, context))
+        if filePath != ".DS_Store":
+            print "===processing file {:}".format(filePath)
+            fin = open(corpusdir + filePath)
+            lines = fin.readlines()
+            for line in lines:
+                cleanedLine = line.decode(ENCODE).split() # decode and delete space and eol
+                for i in xrange(len(cleanedLine)):
+                    center = vocabularyDic[ cleanedLine[i] ]
+                    context = []
+                    for j in range(i - WINDOW_SIZE, i + WINDOW_SIZE + 1):
+                        if j != i:
+                            if j < 0:
+                                context.append(vocabularyDic[LINE_START])
+                            elif j >= len(cleanedLine):
+                                context.append(vocabularyDic[LINE_END])
+                            else:
+                                context.append(vocabularyDic[cleanedLine[j]])
+                    windowData.append((context, center))
     """15796478"""
     # print len(windowData)
     # print windowData[0][0]
@@ -96,4 +99,4 @@ def prepareNPLMData(WINDOW_SIZE):
     return vocabularyDic, windowData
 
 if __name__ == "__main__":
-    # prepareNPLMData(3)
+    prepareNPLMData(3)
