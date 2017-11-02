@@ -193,12 +193,14 @@ def sanity_NPLM():
             model.intrinsicEvaluation(session)
             # writer.close()
 
-#
-# def tune():
-#     #TODO: how to tune?????????
+
+def tune():
+    print "Parameters tuning will be done after speed problem is solved!"
+    #TODO
 
 
 
 if __name__ == "__main__":
     # sanity_NPLMODM()
     sanity_NPLM()
+    # tune()
