@@ -7,38 +7,42 @@ from sets import Set
 import time
 
 #count the lines in each poem file
-def analyzeRawData():
+def analyzeRawData(corpusdir = "./data/raw_std_poem_all_from_rnnpg_data_emnlp-2014/"):
+    totalPoems = 0
     for filePath in os.listdir(corpusdir):
         fin = open(corpusdir + filePath)
         lines = fin.readlines()
         print "****{:}".format(filePath)
         print len(lines)
+        totalPoems += len(lines)
         # print lines[0]
         # print lines[1]
-        '''
-        ****ming.all
-        21716
-        ****qing.all
-        2217
-        ****qsc_tab.txt
-        18986
-        ****qss_tab.txt
-        183883
-        ****qtais_tab.txt
-        4650
-        ****qts_tab.txt
-        42974
-        ****yuan.all
-        10473
-        '''
+    print "****Total number of poems {:}".format(totalPoems)
+    '''
+    ****ming.all
+    21716
+    ****qing.all
+    2217
+    ****qsc_tab.txt
+    18986
+    ****qss_tab.txt
+    183883
+    ****qtais_tab.txt
+    4650
+    ****qts_tab.txt
+    42974
+    ****yuan.all
+    10473
+    '''
 
-def prepareNPLMData(WINDOW_SIZE):
+def prepareNPLMData(WINDOW_SIZE, useTinyCorpus = False):
     print "***Start preparing data for NPLM ........"
     start = time.time()
 
     ENCODE = 'utf-8'
-    corpusdir = "./data/tiny_corpus/"
-    # corpusdir = "./data/raw_std_poem_all_from_rnnpg_data_emnlp-2014/"
+    corpusdir = "./data/raw_std_poem_all_from_rnnpg_data_emnlp-2014/"
+    if useTinyCorpus:
+        corpusdir = "./data/tiny_corpus/"
     LINE_START = "<"
     LINE_END = ">"
 
@@ -99,4 +103,4 @@ def prepareNPLMData(WINDOW_SIZE):
     return vocabularyDic, windowData
 
 if __name__ == "__main__":
-    prepareNPLMData(3)
+    analyzeRawData()

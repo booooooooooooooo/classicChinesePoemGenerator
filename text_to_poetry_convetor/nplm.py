@@ -29,7 +29,7 @@ class Config(object):
 class NPLMODM(object):
     def __init__(self, WINDOW_SIZE):
         self.WINDOW_SIZE = WINDOW_SIZE
-        self.vocabularyDic, self.windowData = prepareNPLMData(WINDOW_SIZE)#list of tuple
+        self.vocabularyDic, self.windowData = prepareNPLMData(WINDOW_SIZE, useTinyCorpus = True)#list of tuple
         self.trainData = self.windowData[0 : len(self.windowData) - 2000]#list of tuple (center word, [context1, context2...])
         self.validData = self.windowData[len(self.windowData) - 2000 : len(self.windowData) - 1000]#list of tuple
         self.testData = self.windowData[len(self.windowData) - 1000 : len(self.windowData)]#list of tuple
@@ -139,7 +139,7 @@ class NPLM(object):
         wordFeatureVectors = np.load(self.config.fileToSaveWordVectors)
         print wordFeatureVectors
         print "***Start intrinsic evaluation......"
-        n_chars = 30
+        n_chars = 1000
         chars = self.odm.getRandomChars(n_chars)
         similarities = []
         for i in xrange(n_chars):
@@ -149,7 +149,8 @@ class NPLM(object):
                     score = (np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b)))
                     similarities.append((chars[i], chars[j], score))
         similarities = sorted(similarities, key=lambda sim: sim[2], reverse=True)
-        for sim in similarities:
+        for i in xrange(50):
+            sim = similarities[i]
             print sim[0], sim[1], sim[2]
 
         print "***Finish intrinsic evaluation. "
@@ -181,7 +182,7 @@ def sanity_NPLMODM():
 
 def sanity_NPLM():
     #lr, dim, h, WINDOW_SIZE, n_epochs,batch_size, fileToSaveWordVectors, dirToSaveModel, dirToLog
-    config = Config(0.5, 30, 50, 5, 100, 50, "./data/wordFeatureVector.txt" , "./saved_tf_model/", "./log_for_tensor_board" )
+    config = Config(0.5, 30, 50, 1, 20, 50, "./data/wordFeatureVector.txt" , "./saved_tf_model/", "./log_for_tensor_board" )
     odm = NPLMODM(WINDOW_SIZE = config.WINDOW_SIZE)
     with tf.Graph().as_default():
         model = NPLM(config, odm)
