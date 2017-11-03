@@ -4,8 +4,8 @@ import os
 from sets import Set
 import numpy as np
 
-from processData import prepareNPLMData
-from util import get_minibatches
+from data_util import prepareNPLMData
+from general_util import get_minibatches
 from scipy import spatial
 
 
