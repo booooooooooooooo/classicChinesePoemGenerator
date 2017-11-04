@@ -101,6 +101,69 @@ def prepareNPLMData(WINDOW_SIZE, useTinyCorpus = False):
     print "***Finish preparing data for NPLM. Time cost {:}".format(end - start)
 
     return vocabularyDic, windowData
+def prepareSkipGramData(WINDOW_SIZE, useTinyCorpus = False):
+    print "***Start preparing data for SkipGram ........"
+    start = time.time()
+
+    ENCODE = 'utf-8'
+    corpusdir = "./data/raw_std_poem_all_from_rnnpg_data_emnlp-2014/"
+    if useTinyCorpus:
+        corpusdir = "./data/tiny_corpus/"
+    LINE_START = "<"
+    LINE_END = ">"
+
+    print "Making vocabularyDic........"
+    corpus = []
+    corpus.append(LINE_START)
+    corpus.append(LINE_END)
+    for filePath in os.listdir(corpusdir):
+        if filePath != ".DS_Store":
+            print "===processing file {:}".format(filePath)
+            fin = open(corpusdir + filePath)
+            charList = fin.read().decode(ENCODE).split()# only chinese characters
+            corpus += charList
+    wordList = list( Set( corpus ) )
+    print "Vocabulary size : {:}".format(len(wordList) )#12174 + 2
+    # print wordList[0]
+    # print wordList[1]
+
+    vocabularyDic = {}
+    for i in xrange(len(wordList)):
+        vocabularyDic[wordList[i]] = i
+    # for k, v in vocabulary.items():
+    #     print k
+    #     print v
+
+
+    print "Making window data........"
+    windowData = []
+    for filePath in os.listdir(corpusdir):
+        if filePath != ".DS_Store":
+            print "===processing file {:}".format(filePath)
+            fin = open(corpusdir + filePath)
+            lines = fin.readlines()
+            for line in lines:
+                cleanedLine = line.decode(ENCODE).split() # decode and delete space and eol
+                for i in xrange(len(cleanedLine)):
+                    center = vocabularyDic[ cleanedLine[i] ]
+                    for j in range(i - WINDOW_SIZE, i + WINDOW_SIZE + 1):
+                        if j != i:
+                            if j < 0:
+                                windowData.append((center, vocabularyDic[LINE_START]))
+                            elif j >= len(cleanedLine):
+                                windowData.append(( center, vocabularyDic[LINE_END]))
+                            else:
+                                windowData.append((center, vocabularyDic[cleanedLine[j]]))
+    print "Data items: {:}".format(len(windowData))#2595058
+    # print windowData[0]
+    # print windowData[1]
+    # print windowData[2]
+
+
+    end = time.time()
+    print "***Finish preparing data for NPLM. Time cost {:}".format(end - start)
+
+    return vocabularyDic, windowData
 
 if __name__ == "__main__":
-    analyzeRawData()
+    prepareSkipGramData(1, useTinyCorpus = True)
