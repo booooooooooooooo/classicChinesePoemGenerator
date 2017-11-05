@@ -14,6 +14,13 @@ def get_minibatches(data, minibatch_size, shuffle=True):
         labelsBatch = [labels[indices[j]] for j in range(i, min(i + minibatch_size, len(indices)))]
         minibatches.append((inputsBatch, labelsBatch))
     return minibatches
+    
+def getRandomChars(n_chars, vocabularyDic):
+    chars = self.vocabularyDic.keys()
+    indices = np.arange(len(chars))
+    np.random.shuffle(indices)
+    return [chars[indices[i]] for i in xrange(n_chars)]
+
 
 def sanity_get_minibatches():
     inputs = [[1,2,3], [4,5,6], [7,8,9],[1,2,3], [4,5,6], [7,8,9],[1,2,3], [4,5,6], [7,8,9]]

@@ -5,8 +5,8 @@ from sets import Set
 import numpy as np
 import time
 
-from data_util import prepareSkipGramData
-from general_util import get_minibatches
+from utilData import prepareSkipGramData
+from utilGeneral import get_minibatches
 from scipy import spatial
 
 
@@ -19,7 +19,7 @@ class Config(object):
         self.n_epochs = n_epochs
 
         self.fileToSaveWordVectors = fileToSaveWordVectors
-        self.pathToSaveModel = dirToSaveModel
+        self.dirToSaveModel = dirToSaveModel
         self.dirToLog = dirToLog
     def getStringOfParas(self):
         #TODO
@@ -126,7 +126,7 @@ class SkipGram(object):
                 corTrainLoss = trainLoss
                 bestValidLoss = validLoss
                 print "^_^ A better model found!"
-                tf.train.Saver().save(sess, self.config.pathToSaveModel + self.config.getStringOfParas())
+                tf.train.Saver().save(sess, self.config.dirToSaveModel + self.config.getStringOfParas())
             end = time.time()
             print "Epoch {:} cost {:} seconds".format(epoch, end - start)
             '''
@@ -141,7 +141,7 @@ class SkipGram(object):
         print "Cooresponding Train Loss   {:} ".format(corTrainLoss)
         print "Parameters used :" + self.config.getStringOfParas()
         print "Recovering best model ......"
-        tf.train.Saver().restore(sess, self.config.pathToSaveModel + self.config.getStringOfParas())
+        tf.train.Saver().restore(sess, self.config.dirToSaveModel + self.config.getStringOfParas())
         print "Word feature vectors saved in" + self.config.fileToSaveWordVectors
         fout = open(self.config.fileToSaveWordVectors, "w")
         np.save(fout, sess.run(self.C))
@@ -150,12 +150,15 @@ class SkipGram(object):
         # print sess.run(self.C)
 
 
-    def intrinsicEvaluation(self, sess):
-        print "***Start intrinsic evaluation......"
+    def intrinsicEvaluationCrossEntropy(self, sess):
+        print "***Start CrossEntropy evaluation......"
         print "Recovering best model......"
-        tf.train.Saver().restore(sess, self.config.pathToSaveModel + self.config.getStringOfParas())
+        tf.train.Saver().restore(sess, self.config.dirToSaveModel + self.config.getStringOfParas())
         testLoss = self.predict(sess, self.odm.getTestData())
         print "Test Loss   {:} ".format(testLoss)
+        print "***Finish CrossEntropy evaluation. "
+    def intrinsicEvaluationCosineSimilarity(self):
+        print "***Start cosine similarity evaluation......"
         print "Loading word vectors......"
         fin = open(self.config.fileToSaveWordVectors)
         wordFeatureVectors = np.load(fin)
@@ -163,7 +166,7 @@ class SkipGram(object):
         print wordFeatureVectors
         print "Some character cosine similirities......"
         n_chars = 1000
-        chars = self.odm.getRandomChars(n_chars)
+        chars = utilGeneral.getRandomChars(n_chars, self.vocabularyDic)
         similarities = []
         for i in xrange(n_chars):
             for j in xrange(n_chars):
@@ -175,11 +178,10 @@ class SkipGram(object):
         for i in xrange(len(similarities)):
             sim = similarities[i]
             # if sim < 0.9 and sim > 0.89:
-            #     print sim[0], sim[1], sim[2]
+                # print sim[0], sim[1], sim[2]
             print sim[0], sim[1], sim[2]
 
-        print "***Finish intrinsic evaluation. "
-
+        print "***Finish cosine similarity evaluation...... "
 
     def __init__(self, config, odm):
         self.config = config
@@ -208,15 +210,16 @@ def sanity_SkipGram():
         with tf.Session() as session:
             # writer = tf.summary.FileWriter(config.dirToLog, session.graph)
             session.run( tf.global_variables_initializer() )
-            model.fit(session)
-            model.intrinsicEvaluation(session)
+            # model.fit(session)
+            # model.intrinsicEvaluationCrossEntropy(session)
+            model.intrinsicEvaluationCosineSimilarity()
+
             # writer.close()
 
 
 def tune():
     print "Parameters tuning will be done after speed problem is solved!"
     #TODO
-
 
 
 if __name__ == "__main__":
