@@ -1,3 +1,4 @@
+#encoding=utf-8
 import tensorflow as tf
 import sys
 import os
@@ -146,8 +147,6 @@ class SkipGram(object):
         fout = open(self.config.fileToSaveWordVectors, "w")
         np.save(fout, sess.run(self.C))
         fout.close()
-        # print type(sess.run(self.C))
-        # print sess.run(self.C)
 
 
     def intrinsicEvaluationCrossEntropy(self, sess):

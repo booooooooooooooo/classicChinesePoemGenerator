@@ -1,3 +1,4 @@
+#encoding=utf-8
 import tensorflow as tf
 import sys
 import os
@@ -5,9 +6,9 @@ from sets import Set
 import numpy as np
 from scipy import spatial
 
-from utilData import prepareNPLMData
+from utilData import UtilData
 from utilGeneral import get_minibatches
-from utilGeneral import getRandomChars
+from utilGeneral import getCosineSimilarities
 
 
 class Config(object):
@@ -32,13 +33,13 @@ class NPLM(object):
         self.pw = tf.placeholder(tf.int32, shape =  [None] , name = "predictedWord")
     def addVariable(self):
         with tf.variable_scope("embeddingLayer"):
-            self.C = tf.get_variable("C", [self.odm.getVocabularySize(), self.config.dim])
+            self.C = tf.get_variable("C", [len(self.vocabularyDic), self.config.dim])
         with tf.variable_scope("hiddenLayer"):
             self.H = tf.get_variable("H", [self.config.dim * (self.config.WINDOW_SIZE * 2), self.config.h])
-            self.d = tf.get_variable("d", [self.config.h])
+            self.d = tf.get_variable("d", [self.config.h, ])
         with tf.variable_scope("outputLayer"):
-            self.U = tf.get_variable("U", [self.config.h, self.odm.getVocabularySize()])
-            self.b = tf.get_variable("b", [self.odm.getVocabularySize()])
+            self.U = tf.get_variable("U", [self.config.h, len(self.vocabularyDic)])
+            self.b = tf.get_variable("b", [len(self.vocabularyDic),])
 
     def getLossFunc(self):
         x = tf.reshape( tf.nn.embedding_lookup(self.C, self.cw), shape = [-1, self.config.dim * (self.config.WINDOW_SIZE * 2)] ) #  batch size * (dim*(WINDOW_SIZE - 1) )
@@ -80,8 +81,8 @@ class NPLM(object):
         print "***Start training model!"
         corTrainLoss = None
         bestValidLoss = sys.float_info.max
-        trainData = self.odm.getTrainData()
-        validData = self.odm.getValidData()
+        trainData = self.trainData
+        validData = self.validData
         for epoch in xrange(self.config.n_epochs) :
             print "***********Fitting Epoch {:}****************".format(epoch)
             trainLoss = self.run_epoch(sess, trainData)
@@ -94,38 +95,31 @@ class NPLM(object):
                 tf.train.Saver().save(sess, self.config.dirToSaveModel + self.config.getStringOfParas())
         print "***Finish training model!"
 
-        tf.train.Saver().restore(sess, self.config.dirToSaveModel + self.config.getStringOfParas())
-        np.save(self.config.fileToSaveWordVectors, sess.run(self.C))
-        testData = self.odm.getTestData()
-        corTestLoss = self.predict(sess, testData)
+
         print "***Summary of model and config"
         print "Best valid Loss   {:} ".format(bestValidLoss)
         print "Cooresponding Train Loss   {:} ".format(corTrainLoss)
-        print "Cooresponding Test Loss   {:} ".format(corTestLoss)
         print "Parameters used :" + self.config.getStringOfParas()
         print "Word feature vectors saved in" + self.config.fileToSaveWordVectors
-
-
-    def intrinsicEvaluation(self, sess):
         tf.train.Saver().restore(sess, self.config.dirToSaveModel + self.config.getStringOfParas())
-        wordFeatureVectors = np.load(self.config.fileToSaveWordVectors)
-        print wordFeatureVectors
-        print "***Start intrinsic evaluation......"
-        n_chars = 1000
-        chars = utilGeneral.getRandomChars(n_chars, vocabularyDic)
-        similarities = []
-        for i in xrange(n_chars):
-            for j in xrange(n_chars):
-                if j > i:
-                    a, b = wordFeatureVectors[ self.odm.getVocabularyDic()[chars[i]] ], wordFeatureVectors[ self.odm.getVocabularyDic()[chars[j]] ]
-                    score = (np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b)))
-                    similarities.append((chars[i], chars[j], score))
-        similarities = sorted(similarities, key=lambda sim: sim[2], reverse=True)
-        for i in xrange(50):
-            sim = similarities[i]
-            print sim[0], sim[1], sim[2]
+        fout = open(self.config.fileToSaveWordVectors, "w")
+        np.save(fout, sess.run(self.C))
+        fout.close()
 
-        print "***Finish intrinsic evaluation. "
+    def crossEntropyEvaluation(self, sess):
+        print "***Start crossEntropyEvaluation......"
+        tf.train.Saver().restore(sess, self.config.dirToSaveModel + self.config.getStringOfParas())
+        testLoss = self.predict(sess, self.testData)
+        print "Test Loss   {:} ".format(testLoss)
+        print "***Finish crossEntropyEvaluation "
+
+    def similarityEvaluation(self):
+        fin = open(self.config.fileToSaveWordVectors)
+        wordFeatureVectors = np.load(fin)
+        print "***Start similarityEvaluation......"
+        scoreRank = getCosineSimilarities(wordFeatureVectors, self.vocabularyDic)
+        print scoreRank[0][0], scoreRank[0][1], scoreRank[0][2]
+        print "***Finish similarityEvaluation "
 
 
     def __init__(self, config, vocabularyDic, trainData, validData, testData):
@@ -133,20 +127,22 @@ class NPLM(object):
         self.vocabularyDic = vocabularyDic
         self.trainData = trainData
         self.validData = validData
+        self.testData = testData
         self.build()
 
 
 
 def sanity_NPLM():
-    config = Config(lr = 0.5,  dim = 30, h = 50, WINDOW_SIZE = 1, n_epochs = 20, batch_size=50, "./data/wordFeatureVector.txt" , "./saved_tf_model/", "./log_for_tensor_board" )
-    vocabularyDic, trainData, validData, testData = UtilData().prepareNPLMData(config.WINDOW_SIZE)
+    config = Config(lr = 0.5,  dim = 30, h = 50, WINDOW_SIZE = 1, n_epochs = 1, batch_size=50, fileToSaveWordVectors = "./data/wordFeatureVector" , dirToSaveModel = "./saved_tf_model/", dirToLog = "./log_for_tensor_board" )
+    vocabularyDic, trainData, validData, testData = UtilData().prepareNPLMData(config.WINDOW_SIZE, useSanityCorpus = True)
     with tf.Graph().as_default():
         model = NPLM(config,vocabularyDic, trainData, validData, testData)
         with tf.Session() as sess:
             # writer = tf.summary.FileWriter(config.dirToLog, session.graph)
             sess.run( tf.global_variables_initializer() )
             model.fit(sess)
-            model.intrinsicEvaluation(sess)
+            model.crossEntropyEvaluation(sess)
+            model.similarityEvaluation()
             # writer.close()
 
 

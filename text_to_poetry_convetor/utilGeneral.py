@@ -1,3 +1,5 @@
+#encoding=utf-8
+
 import numpy as np
 
 def get_minibatches(data, minibatch_size, shuffle=True):
@@ -14,12 +16,24 @@ def get_minibatches(data, minibatch_size, shuffle=True):
         labelsBatch = [labels[indices[j]] for j in range(i, min(i + minibatch_size, len(indices)))]
         minibatches.append((inputsBatch, labelsBatch))
     return minibatches
-    
+
 def getRandomChars(n_chars, vocabularyDic):
-    chars = self.vocabularyDic.keys()
+    chars = vocabularyDic.keys()
     indices = np.arange(len(chars))
     np.random.shuffle(indices)
     return [chars[indices[i]] for i in xrange(n_chars)]
+def getCosineSimilarities(embeddingMatrix, vocabularyDic):
+    n_chars = 1000
+    chars = getRandomChars(n_chars, vocabularyDic)
+    similarities = []
+    for i in xrange(n_chars):
+        for j in xrange(n_chars):
+            if j > i:
+                a, b = embeddingMatrix[vocabularyDic[chars[i]] ], embeddingMatrix[vocabularyDic[chars[j]] ]
+                score = (np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b)))
+                similarities.append((chars[i], chars[j], score))
+    similarities = sorted(similarities, key=lambda sim: sim[2], reverse=True)
+    return similarities
 
 
 def sanity_get_minibatches():
