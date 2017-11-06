@@ -9,10 +9,10 @@ import time
 class UtilData(object):
     def __init__(self):
         self.corpusDir = "./data/corpus/"
-        self.corpusDirSanity = "./data/corpusForSanityCheck/"
         self.ENCODE = 'utf-8'
         self.LINE_START = "<"
         self.LINE_END = ">"
+
 
     def analyzeCorpus(self):
         totalPoems = 0
@@ -24,10 +24,8 @@ class UtilData(object):
                 print "****{:10d} poems in {:}".format(len(lines), filePath)
         print "****{:10d} poems in total".format(totalPoems)
 
-    def prepareVocabularyDic(self, useSanityCorpus):
+    def prepareVocabularyDic(self):
         cdir = self.corpusDir
-        if useSanityCorpus:
-            cdir = self.corpusDirSanity
 
         print "Start preparing vocabularyDic........"
 
@@ -50,11 +48,9 @@ class UtilData(object):
         print "Finish preparing vocabularyDic........"
         return vocabularyDic
 
-    def prepareNPLMData(self, WINDOW_SIZE, useSanityCorpus):
+    def prepareNPLMData(self, WINDOW_SIZE):
 
         cdir = self.corpusDir
-        if useSanityCorpus:
-            cdir = self.corpusDirSanity
 
         print "Start preparing data for NPLM ........"
         print "Start timer"
@@ -92,7 +88,7 @@ class UtilData(object):
 
         return vocabularyDic, trainData, validData, testData
 
-    def prepareSkipGramData(self, WINDOW_SIZE, useSanityCorpus):
+    def prepareSkipGramData(self, WINDOW_SIZE):
         cdir = self.corpusDir
         if useSanityCorpus:
             cdir = self.corpusDirSanity
@@ -131,11 +127,36 @@ class UtilData(object):
         print "Finish preparing data for SkipGram"
 
         return vocabularyDic, trainData, validData, testData
+    def prepareQuatrain5Data(self):
+        cdir = self.corpusDir
 
+        vocabularyDic = self.prepareVocabularyDic(useSanityCorpus)
+        allData = []
+        for filePath in os.listdir(cdir):
+            if filePath.endswith('.txt') or filePath.endswith('.all'):
+                print "processing file {:}".format(filePath)
+                fin = open(cdir + filePath)
+                lines = fin.readlines()
+                for line in lines:
+                    cleanedLine = line.decode(self.ENCODE).split()
+                    if len(cleanedLine) == 20:
+                        allData += prepareQuatrain5DataHelper(self, cleanedLine)
+
+        trainData = zip(*allData[0 : len(allData) - 2000])#(inputs, labels)
+        validData = zip(*allData[len(allData) - 2000 : len(allData) - 1000])#(inputs, labels)
+        testData = zip(*allData[len(allData) - 1000 : len(allData)])#(inputs, labels)
+
+        return vocabularyDic, trainData, validData, testData
+    def prepareQuatrain5DataHelper(self, cleanedLine):
+        result = []
+        for i in [0, 5, 10, 15]:
+            result.append( (cleanedLine[i], cleanedLine[i : i + 5]) )
+        return result
 
 if __name__ == "__main__":
     utilData = UtilData()
-    utilData.analyzeCorpus()
-    utilData.prepareVocabularyDic(True)
-    utilData.prepareNPLMData(1, True)
-    utilData.prepareSkipGramData(1, True)
+    # utilData.analyzeCorpus()
+    # utilData.prepareVocabularyDic(True)
+    # utilData.prepareNPLMData(1, True)
+    # utilData.prepareSkipGramData(1, True)
+    utilData.prepareQuatrain5Data(False)

@@ -157,7 +157,7 @@ def sanityConfig():
 
 def sanity_SkipGram():
     config = Config(30, 1, 0.1, 5, 500, "./output/skipGramWordVec" , "./saved_tf_model/", "./log_for_tensor_board/" )
-    vocabularyDic, trainData, validData, testData = UtilData().prepareSkipGramData(config.WINDOW_SIZE, useSanityCorpus = False)
+    vocabularyDic, trainData, validData, testData = UtilData().prepareSkipGramData(config.WINDOW_SIZE)
     with tf.Graph().as_default():
         model = SkipGram(config,vocabularyDic, trainData, validData, testData)
         with tf.Session() as session:

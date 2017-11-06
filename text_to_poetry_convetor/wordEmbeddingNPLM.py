@@ -133,8 +133,8 @@ class NPLM(object):
 
 
 def sanity_NPLM():
-    config = Config(lr = 0.5,  dim = 30, h = 50, WINDOW_SIZE = 1, n_epochs = 1, batch_size=50, fileToSaveWordVectors = "./data/wordFeatureVector" , dirToSaveModel = "./saved_tf_model/", dirToLog = "./log_for_tensor_board" )
-    vocabularyDic, trainData, validData, testData = UtilData().prepareNPLMData(config.WINDOW_SIZE, useSanityCorpus = True)
+    config = Config(lr = 0.5,  dim = 30, h = 50, WINDOW_SIZE = 1, n_epochs = 1, batch_size=50, fileToSaveWordVectors = "./output/nplmWordVec" , dirToSaveModel = "./saved_tf_model/", dirToLog = "./log_for_tensor_board/" )
+    vocabularyDic, trainData, validData, testData = UtilData().prepareNPLMData(config.WINDOW_SIZE)
     with tf.Graph().as_default():
         model = NPLM(config,vocabularyDic, trainData, validData, testData)
         with tf.Session() as sess:

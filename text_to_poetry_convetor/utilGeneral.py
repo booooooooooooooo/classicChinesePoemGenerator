@@ -1,6 +1,7 @@
 #encoding=utf-8
 
 import numpy as np
+from scipy import spatial
 
 def get_minibatches(data, minibatch_size, shuffle=True):
     minibatches = []
