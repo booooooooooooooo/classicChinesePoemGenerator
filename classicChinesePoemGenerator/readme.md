@@ -5,3 +5,6 @@ deactivate
 
 
 python nplm.py
+
+TODO:
+use table to output info
