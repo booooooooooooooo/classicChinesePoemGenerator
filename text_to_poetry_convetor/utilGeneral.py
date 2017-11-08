@@ -23,14 +23,17 @@ def getRandomChars(n_chars, vocabularyDic):
     indices = np.arange(len(chars))
     np.random.shuffle(indices)
     return [chars[indices[i]] for i in xrange(n_chars)]
-def getCosineSimilarities(embeddingMatrix, vocabularyDic):
-    n_chars = 1000
-    chars = getRandomChars(n_chars, vocabularyDic)
+
+def getCosineSimilarities(fileToSaveWordVectors, chars, vocabularyDic):
+    fin = open(fileToSaveWordVectors)
+    wordFeatureVectors = np.load(fin)
+    fin.close()
+    
     similarities = []
-    for i in xrange(n_chars):
-        for j in xrange(n_chars):
+    for i in xrange(len(chars)):
+        for j in xrange(len(chars)):
             if j > i:
-                a, b = embeddingMatrix[vocabularyDic[chars[i]] ], embeddingMatrix[vocabularyDic[chars[j]] ]
+                a, b = wordFeatureVectors[vocabularyDic[chars[i]] ], wordFeatureVectors[vocabularyDic[chars[j]] ]
                 score = (np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b)))
                 similarities.append((chars[i], chars[j], score))
     similarities = sorted(similarities, key=lambda sim: sim[2], reverse=True)

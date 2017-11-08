@@ -2,16 +2,15 @@
 
 from utilGeneral import getCosineSimilarities
 from utilData import UtilData
-import numpy as np
 
-vocabularyDic = UtilData().prepareVocabularyDic()
+utilData = UtilData()
+similarities = getCosineSimilarities("./wordVec/wordVecSkipGram", utilData.getMostFrequentChars(500), utilData.prepareVocabularyDic())
+for sim in similarities:
+    print sim[0].encode('utf-8'),
+    print sim[1].encode('utf-8'),
+    print sim[2]
 
-fin = open("./output/word2Vec")
-wordFeatureVectors = np.load(fin)
-fin.close()
-
-similarities = getCosineSimilarities(wordFeatureVectors, vocabularyDic)
-
-for i in xrange(len(similarities)):
-    if similarities[i][2] < 0.9 and similarities[i][2] > 0.8:
-        print similarities[i][0].encode('utf-8'), similarities[i][1].encode('utf-8'), similarities[i][2]
+# chars = utilData.getMostFrequentChars(1000)
+# for c in chars:
+#     print c,
+# print chars

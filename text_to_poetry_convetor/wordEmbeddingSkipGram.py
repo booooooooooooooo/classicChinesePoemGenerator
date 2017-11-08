@@ -129,21 +129,15 @@ class SkipGram(object):
         print "***Finish CrossEntropy evaluation. "
     def intrinsicEvaluationCosineSimilarity(self):
         print "***Start cosine similarity evaluation......"
-        print "Loading word vectors......"
-        fin = open(self.config.fileToSaveWordVectors)
-        wordFeatureVectors = np.load(fin)
-        fin.close()
-        print wordFeatureVectors
-        print "Some character cosine similirities......"
-
-        similarities = getCosineSimilarities(wordFeatureVectors, self.vocabularyDic)
-        for i in xrange(50):
+        similarities = getCosineSimilarities(self.config.fileToSaveWordVectors, self.utilData.getMostFrequentChars, self.vocabularyDic)
+        for i in xrange(len(similarities)):
             sim = similarities[i]
             print sim[0], sim[1], sim[2]
         print "***Finish cosine similarity evaluation...... "
 
-    def __init__(self, config, vocabularyDic, trainData, validData, testData):
+    def __init__(self, config, utilData, vocabularyDic, trainData, validData, testData):
         self.config = config
+        self.utilData = utilData
         self.vocabularyDic = vocabularyDic
         self.trainData = trainData
         self.validData = validData
@@ -157,9 +151,10 @@ def sanityConfig():
 
 def sanity_SkipGram():
     config = Config(30, 1, 0.1, 5, 500, "./output/skipGramWordVec" , "./saved_tf_model/", "./log_for_tensor_board/" )
-    vocabularyDic, trainData, validData, testData = UtilData().prepareSkipGramData(config.WINDOW_SIZE, useSanityCorpus = False)
+    utilData = UtilData()
+    vocabularyDic, trainData, validData, testData = utilData.prepareSkipGramData(config.WINDOW_SIZE, useSanityCorpus = False)
     with tf.Graph().as_default():
-        model = SkipGram(config,vocabularyDic, trainData, validData, testData)
+        model = SkipGram(config,utilData, vocabularyDic, trainData, validData, testData)
         with tf.Session() as session:
             # writer = tf.summary.FileWriter(config.dirToLog, session.graph)
             session.run( tf.global_variables_initializer() )
@@ -167,7 +162,15 @@ def sanity_SkipGram():
             model.intrinsicEvaluationCrossEntropy(session)
             model.intrinsicEvaluationCosineSimilarity()
             # writer.close()
-
+def evaluate():
+    num = 100
+    
+    utilData = UtilData()
+    similarities = getCosineSimilarities("./wordVec/wordVecSkipGram", utilData.getMostFrequentChars(num), utilData.prepareVocabularyDic())
+    for sim in similarities:
+        print sim[0].encode('utf-8'),
+        print sim[1].encode('utf-8'),
+        print sim[2]
 
 def tune():
     print "Parameters tuning will be done after speed problem is solved!"

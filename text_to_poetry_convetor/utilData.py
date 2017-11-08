@@ -5,13 +5,14 @@ import os
 
 from sets import Set
 import time
+from collections import Counter
 
 class UtilData(object):
     def __init__(self):
         self.corpusDir = "./data/corpus/"
         self.ENCODE = 'utf-8'
-        self.LINE_START = "<"
-        self.LINE_END = ">"
+        self.LINE_START = '<'
+        self.LINE_END = '>'
 
 
     def analyzeCorpus(self):
@@ -23,6 +24,20 @@ class UtilData(object):
                 totalPoems += len(lines)
                 print "****{:10d} poems in {:}".format(len(lines), filePath)
         print "****{:10d} poems in total".format(totalPoems)
+    def getMostFrequentChars(self, num):
+        cdir = self.corpusDir
+        corpus = []
+        corpus.append(self.LINE_START)
+        corpus.append(self.LINE_END)
+        for filePath in os.listdir(cdir):
+            if filePath.endswith('.txt') or filePath.endswith('.all'):
+                print "processing file {:}".format(filePath)
+                fin = open(cdir + filePath)
+                charList = fin.read().decode(self.ENCODE).split()# only chinese characters
+                corpus += charList
+
+        tupleList = Counter(corpus).most_common(num)
+        return [t[0] for t in tupleList]
 
     def prepareVocabularyDic(self):
         cdir = self.corpusDir
@@ -156,7 +171,15 @@ class UtilData(object):
 if __name__ == "__main__":
     utilData = UtilData()
     # utilData.analyzeCorpus()
-    # utilData.prepareVocabularyDic(True)
-    # utilData.prepareNPLMData(1, True)
-    # utilData.prepareSkipGramData(1, True)
-    utilData.prepareQuatrain5Data(False)
+    # utilData.prepareVocabularyDic()
+    # utilData.prepareNPLMData(1)
+    # utilData.prepareSkipGramData(1)
+    # vocabularyDic, trainData, validData, testData = utilData.prepareQuatrain5Data()
+    # print len(vocabularyDic)
+    # print trainData[0][0], trainData[1][0]
+    #
+    # print validData[0][0], validData[1][0]
+    # print testData[0][0], testData[1][0]
+    chars = utilData.getMostFrequentChars(100)
+    for c in chars:
+        print c,
